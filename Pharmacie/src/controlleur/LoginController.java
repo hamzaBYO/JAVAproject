@@ -7,106 +7,61 @@ import vue.LoginView;
 import vue.PharmacienDashboardView;
 import vue.RegisterView;
 
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
-
-/**
- * LoginController - Gère la logique de connexion
- * Redirige vers AdminDashboard ou PharmacienDashboard selon le type
- */
 public class LoginController {
 
-    private final LoginView    view;
-    private final UtilisateurDAO dao;
+    private final LoginView      view;
+    private final UtilisateurDAO dao = new UtilisateurDAO();
 
     public LoginController(LoginView view) {
         this.view = view;
-        this.dao  = new UtilisateurDAO();
-        bindEvents();
+        view.getBtnLogin()      .addActionListener(e -> handleLogin());
+        view.getBtnGoRegister() .addActionListener(e -> openRegister());
     }
 
-    // ─── Liaison des événements ────────────────────────────────────────────────
-
-    private void bindEvents() {
-
-        // Bouton "Se connecter"
-        view.getBtnLogin().addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                handleLogin();
-            }
-        });
-
-        // Bouton "S'inscrire" → ouvrir RegisterView
-        view.getBtnGoRegister().addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                openRegister();
-            }
-        });
-    }
-
-    // ─── Logique Login ────────────────────────────────────────────────────────
+    // ── Login ─────────────────────────────────────────────────────────────────
 
     private void handleLogin() {
         String email    = view.getEmail().trim();
         String password = view.getPassword().trim();
 
-        // ── Validation des champs ──
-        if (email.isEmpty()) {
-            view.showError("Veuillez saisir votre adresse email.");
-            return;
+        if (email.isEmpty() || password.isEmpty()) {
+            view.showError("Veuillez remplir tous les champs."); return;
         }
         if (!email.contains("@") || !email.contains(".")) {
-            view.showError("Format d'email invalide.");
-            return;
-        }
-        if (password.isEmpty()) {
-            view.showError("Veuillez saisir votre mot de passe.");
-            return;
+            view.showError("Adresse email invalide."); return;
         }
 
-        // ── Authentification via DAO ──
         Utilisateur user = dao.authenticate(email, password);
-
         if (user == null) {
-            view.showError("Email ou mot de passe incorrect.\nVeuillez réessayer.");
-            return;
+            view.showError("Email ou mot de passe incorrect."); return;
         }
 
-        // ── Redirection selon le rôle ──
         view.dispose();
+        redirectUser(user);
+    }
 
-        String type = user.getType().toUpperCase().trim();
+    // ── Redirection selon le rôle ─────────────────────────────────────────────
 
-        switch (type) {
-            case "ADMIN":
-                openAdminDashboard(user);
+    private void redirectUser(Utilisateur user) {
+        switch (user.getType().toUpperCase().trim()) {
+            case "ADMIN": {
+                Admindashboardview adminView = new Admindashboardview();
+                new AdminDashboardController(adminView, user);
+                adminView.setVisible(true);
                 break;
-
-            case "PHARMACIEN":
-                openPharmacienDashboard(user);
+            }
+            case "PHARMACIEN": {
+                PharmacienDashboardView pharmView = new PharmacienDashboardView();
+                new Pharmaciendashboardcontroller(pharmView, user);
+                pharmView.setVisible(true);
                 break;
-
+            }
             default:
-                view.showError("Rôle utilisateur inconnu : " + user.getType());
-                break;
+                view.showError("Rôle inconnu : " + user.getType());
         }
     }
 
-    // ─── Navigation ───────────────────────────────────────────────────────────
-
-    private void openAdminDashboard(Utilisateur user) {
-        Admindashboardview adminView = new Admindashboardview();
-        new AdminDashboardController(adminView, user);
-        adminView.setVisible(true);
-    }
-
-    private void openPharmacienDashboard(Utilisateur user) {
-        PharmacienDashboardView pharmView = new PharmacienDashboardView();
-        new Pharmaciendashboardcontroller(pharmView, user);
-        pharmView.setVisible(true);
-    }
+    // ── Register ──────────────────────────────────────────────────────────────
 
     private void openRegister() {
         RegisterView regView = new RegisterView();
@@ -114,10 +69,10 @@ public class LoginController {
         regView.setVisible(true);
     }
 
-    // ─── Point d'entrée ───────────────────────────────────────────────────────
+    // ── Entry point ───────────────────────────────────────────────────────────
 
     public static void main(String[] args) {
-    	LoginView loginView = new LoginView();
+        LoginView loginView = new LoginView();
         new LoginController(loginView);
         loginView.setVisible(true);
     }

@@ -12,167 +12,124 @@ import vue.OrdonnanceView;
 
 import java.text.SimpleDateFormat;
 import java.util.Date;
-import java.util.List;
 
 public class OrdonnanceController {
 
     private final OrdonnanceView view;
-    private final OrdonnanceDAO  ordonnanceDAO;
-    private final LigneOrdDAO    ligneOrdDAO;
-    private final MedicamentDAO  medicamentDAO;
-    private final ClientDao      clientDAO;
+    private final OrdonnanceDAO  ordonnanceDAO = new OrdonnanceDAO();
+    private final LigneOrdDAO    ligneOrdDAO   = new LigneOrdDAO();
+    private final MedicamentDAO  medicamentDAO = new MedicamentDAO();
+    private final ClientDao      clientDAO     = new ClientDao();
 
     private Ordonnance currentOrdonnance;
 
     public OrdonnanceController(OrdonnanceView view) {
-        this.view          = view;
-        this.ordonnanceDAO = new OrdonnanceDAO();
-        this.ligneOrdDAO   = new LigneOrdDAO();
-        this.medicamentDAO = new MedicamentDAO();
-        this.clientDAO     = new ClientDao();
-        bindEvents();
-    }
-
-    public OrdonnanceController(OrdonnanceView view, String ordonnanceId) {
-        this(view);
-        loadOrdonnance(ordonnanceId);
-    }
-
-    private void bindEvents() {
+        this.view = view;
         view.getBtnClose()      .addActionListener(e -> view.dispose());
         view.getBtnCreateOrd()  .addActionListener(e -> createOrdonnance());
-        view.getBtnAddLigne()   .addActionListener(e -> addLigne());
-        view.getBtnRemoveLigne().addActionListener(e -> removeLigne());
+        view.getBtnAddLigne()   .addActionListener(e -> addMedicine());
+        view.getBtnRemoveLigne().addActionListener(e -> removeMedicine());
     }
 
-    // ── Création ──────────────────────────────────────────────────────────────
+    private void fail(String message) {
+        view.showError(message);
+    }
+
+    // ── Create the prescription ───────────────────────────────────────────────
 
     private void createOrdonnance() {
-        String ordId    = view.getNewOrdId().trim();
+        String id       = view.getNewOrdId().trim();
         String clientId = view.getNewClientId().trim();
         String dateStr  = view.getNewDate().trim();
 
-        if (ordId.isEmpty())    { view.showError("L'ID de l'ordonnance est obligatoire.");              return; }
-        if (clientId.isEmpty()) { view.showError("L'ID du client est obligatoire.");                    return; }
-        if (dateStr.isEmpty())  { view.showError("La date est obligatoire (format : yyyy-MM-dd).");     return; }
-
-        if (ordonnanceDAO.findById(ordId) != null) {
-            view.showError("Une ordonnance avec l'ID « " + ordId + " » existe déjà."); return;
+        if (id.isEmpty() || clientId.isEmpty() || dateStr.isEmpty()) {
+            fail("Veuillez remplir tous les champs : ID, client et date."); return;
         }
 
         Client client = clientDAO.findById(clientId);
-        if (client == null) { view.showError("Aucun client trouvé avec l'ID : " + clientId); return; }
+        if (client == null) {
+            fail("Impossible de trouver le client avec l'ID : " + clientId); return;
+        }
 
         Date date;
         try {
             date = new SimpleDateFormat("yyyy-MM-dd").parse(dateStr);
         } catch (Exception ex) {
-            view.showError("Format de date invalide. Utilisez : yyyy-MM-dd (ex: 2024-01-15)."); return;
+            fail("La date doit être au format yyyy-MM-dd, par exemple : 2024-01-15."); return;
         }
 
-        currentOrdonnance = new Ordonnance(ordId, date, client);
+        currentOrdonnance = new Ordonnance(id, date, client);
         if (!ordonnanceDAO.create(currentOrdonnance)) {
-            view.showError("Erreur lors de la création de l'ordonnance."); currentOrdonnance = null; return;
+            fail("Quelque chose s'est mal passé lors de la création. Réessayez.");
+            currentOrdonnance = null; return;
         }
 
-        String clientInfo = client.getNom() + " " + client.getPrenom() + " (Tél : " + client.getTelephone() + ")";
-        view.updateHeader(ordId, dateStr, clientInfo);
+        String clientLabel = client.getNom() + " " + client.getPrenom() + " (Tél : " + client.getTelephone() + ")";
+        view.updateHeader(id, dateStr, clientLabel);
         view.clearTable();
         view.setTotal(0.0);
-        view.showSuccess("Ordonnance « " + ordId + " » créée avec succès !\nVous pouvez maintenant ajouter des médicaments.");
+        view.showSuccess("Ordonnance « " + id + " » créée ! Ajoutez vos médicaments.");
     }
 
-    // ── Ajout ligne ───────────────────────────────────────────────────────────
+    // ── Add a medicine ────────────────────────────────────────────────────────
 
-    private void addLigne() {
-        if (currentOrdonnance == null) { view.showError("Créez d'abord une ordonnance avant d'ajouter des médicaments."); return; }
-
-        String medId  = view.getMedId().trim();
-        String qteStr = view.getQuantiteStr().trim();
-
-        if (medId.isEmpty()) { view.showError("L'ID du médicament est obligatoire."); return; }
-
-        int quantite;
-        try { quantite = Integer.parseInt(qteStr); }
-        catch (NumberFormatException ex) { view.showError("La quantité doit être un nombre entier."); return; }
-        if (quantite <= 0) { view.showError("La quantité doit être supérieure à 0."); return; }
-
-        Medicament med = medicamentDAO.findById(medId);
-        if (med == null) { view.showError("Aucun médicament trouvé avec l'ID : " + medId); return; }
-
-        if (med.getQuantiteStock() < quantite) {
-            view.showError("Stock insuffisant pour « " + med.getNom() + " ».\nStock disponible : "
-                + med.getQuantiteStock() + " | Quantité demandée : " + quantite); return;
+    private void addMedicine() {
+        if (currentOrdonnance == null) {
+            fail("Commencez par créer une ordonnance."); return;
         }
 
-        for (LigneOrd l : ligneOrdDAO.findByOrdonnance(currentOrdonnance.getIdOrdonnance())) {
-            if (l.getIdMedicament().getIdMedicament().equals(medId)) {
-                view.showError("Le médicament « " + med.getNom() + " » est déjà dans cette ordonnance.\nRetirez la ligne existante pour la modifier."); return;
-            }
+        String medId = view.getMedId().trim();
+        if (medId.isEmpty()) { fail("Veuillez saisir l'ID du médicament."); return; }
+
+        int quantity;
+        try {
+            quantity = Integer.parseInt(view.getQuantiteStr().trim());
+        } catch (NumberFormatException ex) {
+            fail("La quantité doit être un nombre entier valide."); return;
+        }
+        if (quantity <= 0) { fail("La quantité doit être au moins 1."); return; }
+
+        Medicament medicine = medicamentDAO.findById(medId);
+        if (medicine == null) {
+            fail("Aucun médicament trouvé avec l'ID : " + medId); return;
         }
 
-        if (!ligneOrdDAO.create(new LigneOrd(currentOrdonnance, med, quantite))) {
-            view.showError("Erreur lors de l'ajout de la ligne médicament."); return;
+        if (!ligneOrdDAO.create(new LigneOrd(currentOrdonnance, medicine, quantity))) {
+            fail("Erreur lors de l'ajout du médicament. Réessayez."); return;
         }
 
-        int newStock = med.getQuantiteStock() - quantite;
-        if (!medicamentDAO.updateStock(med.getIdMedicament(), newStock))
-            view.showError("Ligne ajoutée mais impossible de mettre à jour le stock. Vérifiez manuellement.");
-
-        view.addLigne(med.getIdMedicament(), med.getNom(), quantite, med.getPrix());
+        view.addLigne(medicine.getIdMedicament(), medicine.getNom(), quantity, medicine.getPrix());
         recalculateTotal();
-        view.showSuccess("Médicament « " + med.getNom() + " » ajouté.\nStock restant : " + newStock);
+        view.showSuccess("« " + medicine.getNom() + " » ajouté avec succès.");
     }
 
-    // ── Retrait ligne ─────────────────────────────────────────────────────────
+    // ── Remove a medicine ─────────────────────────────────────────────────────
 
-    private void removeLigne() {
-        if (currentOrdonnance == null) { view.showError("Aucune ordonnance active."); return; }
+    private void removeMedicine() {
+        if (currentOrdonnance == null) { fail("Aucune ordonnance en cours."); return; }
 
-        int row = view.getTableDetails().getSelectedRow();
-        if (row < 0) { view.showError("Sélectionnez une ligne dans la table pour la retirer."); return; }
+        int selectedRow = view.getTableDetails().getSelectedRow();
+        if (selectedRow < 0) { fail("Cliquez sur une ligne pour la sélectionner."); return; }
 
-        String medId = (String) view.getModel().getValueAt(row, 0);
-        int    qte   = (int)    view.getModel().getValueAt(row, 2);
+        String medId = (String) view.getModel().getValueAt(selectedRow, 0);
 
         if (!ligneOrdDAO.delete(currentOrdonnance.getIdOrdonnance(), medId)) {
-            view.showError("Erreur lors de la suppression de la ligne."); return;
+            fail("Impossible de supprimer cette ligne. Réessayez."); return;
         }
 
-        Medicament med = medicamentDAO.findById(medId);
-        if (med != null) medicamentDAO.updateStock(medId, med.getQuantiteStock() + qte);
-
-        view.getModel().removeRow(row);
+        view.getModel().removeRow(selectedRow);
         recalculateTotal();
     }
 
-    // ── Chargement ────────────────────────────────────────────────────────────
-
-    public void loadOrdonnance(String ordonnanceId) {
-        Ordonnance ord = ordonnanceDAO.findById(ordonnanceId);
-        if (ord == null) { view.showError("Ordonnance introuvable : " + ordonnanceId); return; }
-
-        currentOrdonnance = ord;
-        String clientInfo = ord.getIdClient().getNom() + " " + ord.getIdClient().getPrenom()
-                          + " (Tél : " + ord.getIdClient().getTelephone() + ")";
-        view.updateHeader(ord.getIdOrdonnance(), ord.getDate().toString(), clientInfo);
-
-        view.clearTable();
-        for (LigneOrd l : ligneOrdDAO.findByOrdonnance(ordonnanceId))
-            view.addLigne(l.getIdMedicament().getIdMedicament(), l.getIdMedicament().getNom(),
-                          l.getQuantite(), l.getIdMedicament().getPrix());
-        recalculateTotal();
-    }
-
-    // ── Total ─────────────────────────────────────────────────────────────────
+    // ── Recalculate total ─────────────────────────────────────────────────────
 
     private void recalculateTotal() {
         double total = 0.0;
         for (int i = 0; i < view.getModel().getRowCount(); i++) {
             try {
-                int    qte  = (Integer) view.getModel().getValueAt(i, 2);
-                double prix = Double.parseDouble(((String) view.getModel().getValueAt(i, 3)).replace(",", "."));
-                total += qte * prix;
+                int    qty   = (Integer) view.getModel().getValueAt(i, 2);
+                double price = Double.parseDouble(((String) view.getModel().getValueAt(i, 3)).replace(",", "."));
+                total += qty * price;
             } catch (Exception ignored) {}
         }
         view.setTotal(total);
