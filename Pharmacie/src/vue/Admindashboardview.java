@@ -4,11 +4,11 @@ import javax.swing.*;
 import javax.swing.border.*;
 import javax.swing.table.*;
 import java.awt.*;
-import java.awt.event.*;
+import java.awt.event.FocusAdapter;
+import java.awt.event.FocusEvent;
 
 public class Admindashboardview extends JFrame {
 
-    // ── Couleurs ──────────────────────────────────────────────────────────────
     public static final Color COLOR_SIDEBAR   = new Color(28, 78, 115);
     public static final Color COLOR_PRIMARY   = new Color(33, 97, 140);
     public static final Color COLOR_SECONDARY = new Color(39, 174, 96);
@@ -17,14 +17,14 @@ public class Admindashboardview extends JFrame {
     public static final Color COLOR_WHITE     = Color.WHITE;
     public static final Color COLOR_TEXT      = new Color(30, 39, 46);
 
-    // ── Champs Utilisateurs ───────────────────────────────────────────────────
+    // ── User fields ───────────────────────────────────────────────────────────
     private JTextField txtUserId, txtUserCin, txtUserNom, txtUserPrenom, txtUserEmail, txtUserPwd;
     private JComboBox<String> cmbUserType;
     private JButton btnAddUser, btnUpdateUser, btnDeleteUser, btnSearchUser, btnClearUser;
     private JTable tableUsers; private DefaultTableModel modelUsers;
     private JTextField txtSearchUser;
 
-    // ── Champs Médicaments ────────────────────────────────────────────────────
+    // ── Medicine fields ───────────────────────────────────────────────────────
     private JTextField txtMedId, txtMedNom, txtMedPrix, txtMedStock;
     private JComboBox<String> cmbMedType;
     private JButton btnAddMed, btnUpdateMed, btnDeleteMed, btnSearchMed, btnClearMed;
@@ -32,18 +32,67 @@ public class Admindashboardview extends JFrame {
     private JTextField txtSearchMed;
 
     // ── Navigation ────────────────────────────────────────────────────────────
-    private JButton btnNavUsers, btnNavMeds, btnLogout;
+    private JButton btnNavUsers, btnNavMeds, btnNavClients, btnLogout;
     private JPanel contentPanel; private CardLayout cardLayout;
+
+    // ── Callbacks ─────────────────────────────────────────────────────────────
+    private Runnable onAddUser, onUpdateUser, onDeleteUser, onSearchUser, onClearUser, onUserRowSelected;
+    private Runnable onAddMed,  onUpdateMed,  onDeleteMed,  onSearchMed,  onClearMed,  onMedRowSelected;
+    private Runnable onNavUsers, onNavMeds, onNavClients, onLogout;
 
     public Admindashboardview() {
         setTitle("Pharmacie - Administration");
         setDefaultCloseOperation(EXIT_ON_CLOSE);
         setSize(1050, 680); setLocationRelativeTo(null); setResizable(true);
+
         JPanel root = new JPanel(new BorderLayout());
         root.add(buildSidebar(), BorderLayout.WEST);
         root.add(buildContent(), BorderLayout.CENTER);
         setContentPane(root);
+
+        // ── All events wired here in the view ─────────────────────────────────
+        btnNavUsers  .addActionListener(e -> { if (onNavUsers   != null) onNavUsers.run();   });
+        btnNavMeds   .addActionListener(e -> { if (onNavMeds    != null) onNavMeds.run();    });
+        btnNavClients.addActionListener(e -> { if (onNavClients != null) onNavClients.run(); });
+        btnLogout    .addActionListener(e -> { if (onLogout     != null) onLogout.run();     });
+
+        btnAddUser   .addActionListener(e -> { if (onAddUser    != null) onAddUser.run();    });
+        btnUpdateUser.addActionListener(e -> { if (onUpdateUser != null) onUpdateUser.run(); });
+        btnDeleteUser.addActionListener(e -> { if (onDeleteUser != null) onDeleteUser.run(); });
+        btnSearchUser.addActionListener(e -> { if (onSearchUser != null) onSearchUser.run(); });
+        btnClearUser .addActionListener(e -> { if (onClearUser  != null) onClearUser.run();  });
+        tableUsers.getSelectionModel().addListSelectionListener(e -> {
+            if (!e.getValueIsAdjusting() && onUserRowSelected != null) onUserRowSelected.run();
+        });
+
+        btnAddMed   .addActionListener(e -> { if (onAddMed    != null) onAddMed.run();    });
+        btnUpdateMed.addActionListener(e -> { if (onUpdateMed != null) onUpdateMed.run(); });
+        btnDeleteMed.addActionListener(e -> { if (onDeleteMed != null) onDeleteMed.run(); });
+        btnSearchMed.addActionListener(e -> { if (onSearchMed != null) onSearchMed.run(); });
+        btnClearMed .addActionListener(e -> { if (onClearMed  != null) onClearMed.run();  });
+        tableMeds.getSelectionModel().addListSelectionListener(e -> {
+            if (!e.getValueIsAdjusting() && onMedRowSelected != null) onMedRowSelected.run();
+        });
     }
+
+    // ── Callback setters ──────────────────────────────────────────────────────
+
+    public void setOnNavUsers      (Runnable r) { onNavUsers       = r; }
+    public void setOnNavMeds       (Runnable r) { onNavMeds        = r; }
+    public void setOnNavClients    (Runnable r) { onNavClients     = r; }
+    public void setOnLogout        (Runnable r) { onLogout         = r; }
+    public void setOnAddUser       (Runnable r) { onAddUser        = r; }
+    public void setOnUpdateUser    (Runnable r) { onUpdateUser     = r; }
+    public void setOnDeleteUser    (Runnable r) { onDeleteUser     = r; }
+    public void setOnSearchUser    (Runnable r) { onSearchUser     = r; }
+    public void setOnClearUser     (Runnable r) { onClearUser      = r; }
+    public void setOnUserRowSelected(Runnable r){ onUserRowSelected = r; }
+    public void setOnAddMed        (Runnable r) { onAddMed         = r; }
+    public void setOnUpdateMed     (Runnable r) { onUpdateMed      = r; }
+    public void setOnDeleteMed     (Runnable r) { onDeleteMed      = r; }
+    public void setOnSearchMed     (Runnable r) { onSearchMed      = r; }
+    public void setOnClearMed      (Runnable r) { onClearMed       = r; }
+    public void setOnMedRowSelected(Runnable r) { onMedRowSelected = r; }
 
     // ── Sidebar ───────────────────────────────────────────────────────────────
 
@@ -52,19 +101,19 @@ public class Admindashboardview extends JFrame {
         p.setBackground(COLOR_SIDEBAR); p.setPreferredSize(new Dimension(210, 0));
         p.setBorder(new EmptyBorder(20, 12, 20, 12));
 
-        JLabel lblApp  = lbl("PharmaCie", Font.BOLD, 18, COLOR_WHITE);     lblApp.setAlignmentX(CENTER_ALIGNMENT);
-        JLabel lblRole = lbl("ADMIN",     Font.PLAIN, 11, new Color(173,216,230)); lblRole.setAlignmentX(CENTER_ALIGNMENT);
-        JSeparator sep = new JSeparator(); sep.setForeground(new Color(60,110,150)); sep.setMaximumSize(new Dimension(Short.MAX_VALUE,1));
+        JLabel lblApp  = lbl("PharmaCie", Font.BOLD, 18, COLOR_WHITE);              lblApp.setAlignmentX(CENTER_ALIGNMENT);
+        JLabel lblRole = lbl("ADMIN",     Font.PLAIN, 11, new Color(173,216,230));   lblRole.setAlignmentX(CENTER_ALIGNMENT);
+        JSeparator sep = new JSeparator(); sep.setForeground(new Color(60,110,150)); sep.setMaximumSize(new Dimension(Short.MAX_VALUE, 1));
 
-        btnNavUsers = sidebarBtn("Utilisateurs");
-        btnNavMeds  = sidebarBtn("Médicaments");
-        btnLogout   = sidebarBtn("Déconnexion"); btnLogout.setForeground(new Color(255,120,120));
+        btnNavUsers   = sidebarBtn("Utilisateurs");
+        btnNavMeds    = sidebarBtn("Médicaments");
+        btnNavClients = sidebarBtn("Clients");
+        btnLogout     = sidebarBtn("Déconnexion"); btnLogout.setForeground(new Color(255,120,120));
 
-        p.add(Box.createVerticalStrut(10)); p.add(lblApp); p.add(Box.createVerticalStrut(4));
-        p.add(lblRole); p.add(Box.createVerticalStrut(20)); p.add(sep);
-        p.add(Box.createVerticalStrut(24)); p.add(btnNavUsers);
-        p.add(Box.createVerticalStrut(10)); p.add(btnNavMeds);
-        p.add(Box.createVerticalGlue());    p.add(btnLogout);
+        p.add(vs(10)); p.add(lblApp); p.add(vs(4)); p.add(lblRole); p.add(vs(20)); p.add(sep);
+        p.add(vs(24)); p.add(btnNavUsers); p.add(vs(10)); p.add(btnNavMeds);
+        p.add(vs(10)); p.add(btnNavClients);
+        p.add(Box.createVerticalGlue()); p.add(btnLogout);
         return p;
     }
 
@@ -73,13 +122,12 @@ public class Admindashboardview extends JFrame {
         b.setFont(new Font("Segoe UI", Font.PLAIN, 13)); b.setForeground(COLOR_WHITE);
         b.setBackground(COLOR_SIDEBAR); b.setFocusPainted(false); b.setBorderPainted(false);
         b.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-        b.setMaximumSize(new Dimension(Short.MAX_VALUE, 42));
-        b.setAlignmentX(LEFT_ALIGNMENT); b.setHorizontalAlignment(SwingConstants.LEFT);
-        b.setBorder(new EmptyBorder(0, 14, 0, 0));
+        b.setMaximumSize(new Dimension(Short.MAX_VALUE, 42)); b.setAlignmentX(LEFT_ALIGNMENT);
+        b.setHorizontalAlignment(SwingConstants.LEFT); b.setBorder(new EmptyBorder(0,14,0,0));
         return b;
     }
 
-    // ── Content CardLayout ────────────────────────────────────────────────────
+    // ── Content ───────────────────────────────────────────────────────────────
 
     private JPanel buildContent() {
         cardLayout = new CardLayout(); contentPanel = new JPanel(cardLayout);
@@ -103,7 +151,7 @@ public class Admindashboardview extends JFrame {
         return p;
     }
 
-    // ── Formulaire Utilisateurs ───────────────────────────────────────────────
+    // ── User form ─────────────────────────────────────────────────────────────
 
     private JPanel buildUserForm() {
         JPanel f = form();
@@ -114,15 +162,15 @@ public class Admindashboardview extends JFrame {
         txtUserEmail  = row(f, "Email",        "email@mail.com");
         txtUserPwd    = row(f, "Mot de passe", "••••••");
         cmbUserType   = combo(f, "Type", new String[]{"PHARMACIEN","ADMIN"});
-        f.add(Box.createVerticalStrut(14));
-        btnAddUser    = actionBtn("Ajouter",    COLOR_SECONDARY); f.add(btnAddUser);    f.add(vs(8));
-        btnUpdateUser = actionBtn("Modifier",   COLOR_ACCENT);    f.add(btnUpdateUser); f.add(vs(8));
-        btnDeleteUser = actionBtn("Supprimer",  new Color(231,76,60)); f.add(btnDeleteUser); f.add(vs(8));
-        btnClearUser  = actionBtn("Vider",      Color.GRAY);      f.add(btnClearUser);
+        f.add(vs(14));
+        btnAddUser    = actionBtn("Ajouter",   COLOR_SECONDARY);           f.add(btnAddUser);    f.add(vs(8));
+        btnUpdateUser = actionBtn("Modifier",  COLOR_ACCENT);              f.add(btnUpdateUser); f.add(vs(8));
+        btnDeleteUser = actionBtn("Supprimer", new Color(231,76,60));      f.add(btnDeleteUser); f.add(vs(8));
+        btnClearUser  = actionBtn("Vider",     Color.GRAY);                f.add(btnClearUser);
         return f;
     }
 
-    // ── Formulaire Médicaments ────────────────────────────────────────────────
+    // ── Medicine form ─────────────────────────────────────────────────────────
 
     private JPanel buildMedForm() {
         JPanel f = form();
@@ -131,27 +179,27 @@ public class Admindashboardview extends JFrame {
         txtMedPrix  = row(f, "Prix (DT)",     "0.00");
         txtMedStock = row(f, "Stock",         "0");
         cmbMedType  = combo(f, "Type", new String[]{"Comprimé","Sirop","Injection","Pommade","Capsule","Autre"});
-        f.add(Box.createVerticalStrut(14));
-        btnAddMed    = actionBtn("Ajouter",   COLOR_SECONDARY); f.add(btnAddMed);    f.add(vs(8));
-        btnUpdateMed = actionBtn("Modifier",  COLOR_ACCENT);    f.add(btnUpdateMed); f.add(vs(8));
-        btnDeleteMed = actionBtn("Supprimer", new Color(231,76,60)); f.add(btnDeleteMed); f.add(vs(8));
-        btnClearMed  = actionBtn("Vider",     Color.GRAY);      f.add(btnClearMed);
+        f.add(vs(14));
+        btnAddMed    = actionBtn("Ajouter",   COLOR_SECONDARY);            f.add(btnAddMed);    f.add(vs(8));
+        btnUpdateMed = actionBtn("Modifier",  COLOR_ACCENT);               f.add(btnUpdateMed); f.add(vs(8));
+        btnDeleteMed = actionBtn("Supprimer", new Color(231,76,60));       f.add(btnDeleteMed); f.add(vs(8));
+        btnClearMed  = actionBtn("Vider",     Color.GRAY);                 f.add(btnClearMed);
         return f;
     }
 
     // ── Tables ────────────────────────────────────────────────────────────────
 
     private JPanel buildUserTable() {
-        String[] cols = {"ID","CIN","Nom","Prénom","Email","Type"};
-        modelUsers = model(cols); tableUsers = styledTable(modelUsers);
+        modelUsers = model(new String[]{"ID","CIN","Nom","Prénom","Email","Type"});
+        tableUsers = styledTable(modelUsers);
         btnSearchUser = actionBtn("Rechercher", COLOR_PRIMARY); btnSearchUser.setPreferredSize(new Dimension(130,36));
         txtSearchUser = searchField();
         return tablePanel(txtSearchUser, btnSearchUser, tableUsers);
     }
 
     private JPanel buildMedTable() {
-        String[] cols = {"ID","Nom","Prix (DT)","Stock","Type"};
-        modelMeds = model(cols); tableMeds = styledTable(modelMeds);
+        modelMeds = model(new String[]{"ID","Nom","Prix (DT)","Stock","Type"});
+        tableMeds = styledTable(modelMeds);
         btnSearchMed = actionBtn("Rechercher", COLOR_PRIMARY); btnSearchMed.setPreferredSize(new Dimension(130,36));
         txtSearchMed = searchField();
         return tablePanel(txtSearchMed, btnSearchMed, tableMeds);
@@ -166,7 +214,7 @@ public class Admindashboardview extends JFrame {
         return p;
     }
 
-    // ── Helpers de style ──────────────────────────────────────────────────────
+    // ── Style helpers ─────────────────────────────────────────────────────────
 
     private JPanel form() {
         JPanel f = new JPanel(); f.setLayout(new BoxLayout(f, BoxLayout.Y_AXIS));
@@ -176,15 +224,14 @@ public class Admindashboardview extends JFrame {
     }
 
     private JTextField row(JPanel form, String label, String ph) {
-        form.add(lbl(label, Font.BOLD, 11, COLOR_PRIMARY));
-        form.add(vs(4));
+        form.add(lbl(label, Font.BOLD, 11, COLOR_PRIMARY)); form.add(vs(4));
         JTextField f = new JTextField(ph);
         f.setFont(new Font("Segoe UI", Font.PLAIN, 12)); f.setForeground(Color.GRAY);
         f.setMaximumSize(new Dimension(Short.MAX_VALUE, 34)); f.setAlignmentX(LEFT_ALIGNMENT);
         f.setBorder(new CompoundBorder(new LineBorder(new Color(200,220,240),1,true), new EmptyBorder(4,8,4,8)));
         f.addFocusListener(new FocusAdapter() {
-            public void focusGained(FocusEvent e) { if(f.getText().equals(ph)){f.setText("");f.setForeground(COLOR_TEXT);} }
-            public void focusLost (FocusEvent e) { if(f.getText().isEmpty()){f.setText(ph);f.setForeground(Color.GRAY);} }
+            public void focusGained(FocusEvent e) { if (f.getText().equals(ph)) { f.setText(""); f.setForeground(COLOR_TEXT); } }
+            public void focusLost (FocusEvent e)  { if (f.getText().isEmpty())  { f.setText(ph); f.setForeground(Color.GRAY); } }
         });
         form.add(f); form.add(vs(9));
         return f;
@@ -216,7 +263,7 @@ public class Admindashboardview extends JFrame {
     }
 
     private DefaultTableModel model(String[] cols) {
-        return new DefaultTableModel(cols, 0) { public boolean isCellEditable(int r, int c){return false;} };
+        return new DefaultTableModel(cols, 0) { public boolean isCellEditable(int r, int c) { return false; } };
     }
 
     private JTable styledTable(DefaultTableModel m) {
@@ -230,7 +277,7 @@ public class Admindashboardview extends JFrame {
         t.setDefaultRenderer(Object.class, new DefaultTableCellRenderer() {
             public Component getTableCellRendererComponent(JTable tbl, Object v, boolean sel, boolean foc, int row, int col) {
                 super.getTableCellRendererComponent(tbl,v,sel,foc,row,col);
-                if(!sel){ setBackground(row%2==0?COLOR_WHITE:new Color(235,245,255)); setForeground(COLOR_TEXT); }
+                if (!sel) { setBackground(row%2==0 ? COLOR_WHITE : new Color(235,245,255)); setForeground(COLOR_TEXT); }
                 setBorder(new EmptyBorder(0,8,0,8)); return this;
             }
         });
@@ -245,12 +292,12 @@ public class Admindashboardview extends JFrame {
 
     // ── Navigation ────────────────────────────────────────────────────────────
 
-    public void showUsers() { cardLayout.show(contentPanel,"USERS"); }
-    public void showMeds()  { cardLayout.show(contentPanel,"MEDS"); }
+    public void showUsers()   { cardLayout.show(contentPanel, "USERS"); }
+    public void showMeds()    { cardLayout.show(contentPanel, "MEDS");  }
 
-    // ── Getters Utilisateurs ──────────────────────────────────────────────────
+    // ── Getters Users ─────────────────────────────────────────────────────────
 
-    private String clean(JTextField f, String ph) { String v=f.getText().trim(); return v.equals(ph)?"":v; }
+    private String clean(JTextField f, String ph) { String v = f.getText().trim(); return v.equals(ph) ? "" : v; }
 
     public String getUserId()     { return clean(txtUserId,    "USR001"); }
     public String getUserCin()    { return clean(txtUserCin,   "12345678"); }
@@ -258,37 +305,21 @@ public class Admindashboardview extends JFrame {
     public String getUserPrenom() { return clean(txtUserPrenom,"Prénom"); }
     public String getUserEmail()  { return clean(txtUserEmail, "email@mail.com"); }
     public String getUserPwd()    { return clean(txtUserPwd,   "••••••"); }
-    public String getUserType()   { return (String)cmbUserType.getSelectedItem(); }
+    public String getUserType()   { return (String) cmbUserType.getSelectedItem(); }
     public String getSearchUser() { return txtSearchUser.getText().trim(); }
-    public JTable getTableUsers() { return tableUsers; }
+    public JTable            getTableUsers() { return tableUsers; }
     public DefaultTableModel getModelUsers() { return modelUsers; }
-    public JButton getBtnAddUser()    { return btnAddUser; }
-    public JButton getBtnUpdateUser() { return btnUpdateUser; }
-    public JButton getBtnDeleteUser() { return btnDeleteUser; }
-    public JButton getBtnSearchUser() { return btnSearchUser; }
-    public JButton getBtnClearUser()  { return btnClearUser; }
 
-    // ── Getters Médicaments ───────────────────────────────────────────────────
+    // ── Getters Meds ──────────────────────────────────────────────────────────
 
     public String getMedId()     { return clean(txtMedId,    "MED001"); }
     public String getMedNom()    { return clean(txtMedNom,   "Nom médicament"); }
     public String getMedPrix()   { return clean(txtMedPrix,  "0.00"); }
     public String getMedStock()  { return clean(txtMedStock, "0"); }
-    public String getMedType()   { return (String)cmbMedType.getSelectedItem(); }
+    public String getMedType()   { return (String) cmbMedType.getSelectedItem(); }
     public String getSearchMed() { return txtSearchMed.getText().trim(); }
-    public JTable getTableMeds() { return tableMeds; }
+    public JTable            getTableMeds() { return tableMeds; }
     public DefaultTableModel getModelMeds() { return modelMeds; }
-    public JButton getBtnAddMed()    { return btnAddMed; }
-    public JButton getBtnUpdateMed() { return btnUpdateMed; }
-    public JButton getBtnDeleteMed() { return btnDeleteMed; }
-    public JButton getBtnSearchMed() { return btnSearchMed; }
-    public JButton getBtnClearMed()  { return btnClearMed; }
-
-    // ── Getters Navigation ────────────────────────────────────────────────────
-
-    public JButton getBtnNavUsers() { return btnNavUsers; }
-    public JButton getBtnNavMeds()  { return btnNavMeds; }
-    public JButton getBtnLogout()   { return btnLogout; }
 
     // ── Fill forms ────────────────────────────────────────────────────────────
 
@@ -309,7 +340,7 @@ public class Admindashboardview extends JFrame {
         cmbMedType.setSelectedItem(type);
     }
 
-    public void showError(String m)   { JOptionPane.showMessageDialog(this,m,"Erreur",  JOptionPane.ERROR_MESSAGE); }
-    public void showSuccess(String m) { JOptionPane.showMessageDialog(this,m,"Succès",  JOptionPane.INFORMATION_MESSAGE); }
-    public int  confirm(String m)     { return JOptionPane.showConfirmDialog(this,m,"Confirmation",JOptionPane.YES_NO_OPTION); }
+    public void showError(String m)   { JOptionPane.showMessageDialog(this, m, "Erreur",  JOptionPane.ERROR_MESSAGE); }
+    public void showSuccess(String m) { JOptionPane.showMessageDialog(this, m, "Succès",  JOptionPane.INFORMATION_MESSAGE); }
+    public int  confirm(String m)     { return JOptionPane.showConfirmDialog(this, m, "Confirmation", JOptionPane.YES_NO_OPTION); }
 }

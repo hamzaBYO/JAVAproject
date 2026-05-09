@@ -14,15 +14,13 @@ public class LoginController {
 
     public LoginController(LoginView view) {
         this.view = view;
-        view.getBtnLogin()      .addActionListener(e -> handleLogin());
-        view.getBtnGoRegister() .addActionListener(e -> openRegister());
+        view.setOnLogin     (this::handleLogin);
+        view.setOnGoRegister(this::openRegister);
     }
 
-    // ── Login ─────────────────────────────────────────────────────────────────
-
     private void handleLogin() {
-        String email    = view.getEmail().trim();
-        String password = view.getPassword().trim();
+        String email    = view.getEmail();
+        String password = view.getPassword();
 
         if (email.isEmpty() || password.isEmpty()) {
             view.showError("Veuillez remplir tous les champs."); return;
@@ -32,28 +30,20 @@ public class LoginController {
         }
 
         Utilisateur user = dao.authenticate(email, password);
-        if (user == null) {
-            view.showError("Email ou mot de passe incorrect."); return;
-        }
+        if (user == null) { view.showError("Email ou mot de passe incorrect."); return; }
 
         view.dispose();
-        redirectUser(user);
-    }
-
-    // ── Redirection selon le rôle ─────────────────────────────────────────────
-
-    private void redirectUser(Utilisateur user) {
         switch (user.getType().toUpperCase().trim()) {
             case "ADMIN": {
-                Admindashboardview adminView = new Admindashboardview();
-                new AdminDashboardController(adminView, user);
-                adminView.setVisible(true);
+                Admindashboardview v = new Admindashboardview();
+                new AdminDashboardController(v, user);
+                v.setVisible(true);
                 break;
             }
             case "PHARMACIEN": {
-                PharmacienDashboardView pharmView = new PharmacienDashboardView();
-                new Pharmaciendashboardcontroller(pharmView, user);
-                pharmView.setVisible(true);
+                PharmacienDashboardView v = new PharmacienDashboardView();
+                new Pharmaciendashboardcontroller(v, user);
+                v.setVisible(true);
                 break;
             }
             default:
@@ -61,19 +51,15 @@ public class LoginController {
         }
     }
 
-    // ── Register ──────────────────────────────────────────────────────────────
-
     private void openRegister() {
-        RegisterView regView = new RegisterView();
-        new RegisterController(regView);
-        regView.setVisible(true);
+        RegisterView v = new RegisterView();
+        new RegisterController(v);
+        v.setVisible(true);
     }
 
-    // ── Entry point ───────────────────────────────────────────────────────────
-
     public static void main(String[] args) {
-        LoginView loginView = new LoginView();
-        new LoginController(loginView);
-        loginView.setVisible(true);
+        LoginView v = new LoginView();
+        new LoginController(v);
+        v.setVisible(true);
     }
 }

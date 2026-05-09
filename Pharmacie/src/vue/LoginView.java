@@ -3,111 +3,128 @@ package vue;
 import javax.swing.*;
 import javax.swing.border.*;
 import java.awt.*;
-import java.awt.event.*;
+import java.awt.event.FocusAdapter;
+import java.awt.event.FocusEvent;
 
 public class LoginView extends JFrame {
 
-    private JTextField     txtEmail    = field("exemple@email.com");
-    private JPasswordField txtPassword = new JPasswordField();
-    private JButton        btnLogin    = btn("Se connecter", new Color(33,97,140), Color.WHITE);
-    private JButton        btnGoRegister;
+    public static final Color COLOR_PRIMARY = new Color(33, 97, 140);
+    public static final Color COLOR_ACCENT  = new Color(52, 152, 219);
+    public static final Color COLOR_WHITE   = Color.WHITE;
+    public static final Color COLOR_TEXT    = new Color(30, 39, 46);
+    public static final Color COLOR_LIGHT   = new Color(236, 240, 241);
 
-    private static final Color BLUE  = new Color(33, 97, 140);
-    private static final Color LIGHT = new Color(214, 234, 248);
+    private JTextField txtEmail;
+    private JPasswordField txtPassword;
+    private JButton btnLogin, btnGoRegister;
+
+    private Runnable onLogin, onGoRegister;
 
     public LoginView() {
-        setTitle("Pharmacie - Connexion");
-        setSize(420, 480);
+        setTitle("Pharmacie — Connexion");
+        setDefaultCloseOperation(EXIT_ON_CLOSE);
+        setSize(420, 340);
         setLocationRelativeTo(null);
         setResizable(false);
-        setDefaultCloseOperation(EXIT_ON_CLOSE);
 
-        JPanel card = new JPanel();
-        card.setLayout(new BoxLayout(card, BoxLayout.Y_AXIS));
-        card.setBackground(Color.WHITE);
-        card.setBorder(new EmptyBorder(40, 46, 40, 46));
+        JPanel root = new JPanel(new BorderLayout());
+        root.setBackground(COLOR_LIGHT);
+        root.add(buildHeader(), BorderLayout.NORTH);
+        root.add(buildForm(),   BorderLayout.CENTER);
+        setContentPane(root);
 
-        txtPassword.setFont(new Font("Segoe UI", Font.PLAIN, 13));
-        txtPassword.setMaximumSize(new Dimension(Integer.MAX_VALUE, 40));
-        txtPassword.setHorizontalAlignment(JTextField.CENTER);
-        txtPassword.setBorder(new CompoundBorder(new LineBorder(LIGHT, 1, true), new EmptyBorder(7, 10, 7, 10)));
-
-        card.add(centered(label("Connexion", Font.BOLD, 22, BLUE)));
-        card.add(Box.createVerticalStrut(24));
-
-        card.add(centered(label("Email", Font.BOLD, 11, Color.DARK_GRAY)));        card.add(Box.createVerticalStrut(4));
-        card.add(centeredField(txtEmail));                                           card.add(Box.createVerticalStrut(14));
-        card.add(centered(label("Mot de passe", Font.BOLD, 11, Color.DARK_GRAY))); card.add(Box.createVerticalStrut(4));
-        card.add(centeredField(txtPassword));                                        card.add(Box.createVerticalStrut(24));
-        card.add(btnLogin);                                                     card.add(Box.createVerticalStrut(16));
-
-        btnGoRegister = new JButton("S'inscrire");
-        btnGoRegister.setForeground(BLUE);
-        btnGoRegister.setFont(new Font("Segoe UI", Font.BOLD, 12));
-        btnGoRegister.setBorderPainted(false); btnGoRegister.setContentAreaFilled(false); btnGoRegister.setFocusPainted(false);
-        btnGoRegister.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-
-        JPanel regRow = new JPanel(new FlowLayout(FlowLayout.CENTER, 4, 0));
-        regRow.setBackground(Color.WHITE); regRow.setAlignmentX(CENTER_ALIGNMENT);
-        JLabel q = new JLabel("Pas de compte ?");
-        q.setFont(new Font("Segoe UI", Font.PLAIN, 12)); q.setForeground(Color.GRAY);
-        regRow.add(q); regRow.add(btnGoRegister);
-        card.add(regRow);
-
-        JPanel bg = new JPanel(new GridBagLayout());
-        bg.setBackground(BLUE);
-        bg.add(card);
-        setContentPane(bg);
+        // ── Events wired in the view ──────────────────────────────────────────
+        btnLogin.addActionListener     (e -> { if (onLogin      != null) onLogin.run(); });
+        btnGoRegister.addActionListener(e -> { if (onGoRegister != null) onGoRegister.run(); });
     }
 
-    // ── Helpers ───────────────────────────────────────────────────────────────
+    public void setOnLogin     (Runnable r) { onLogin      = r; }
+    public void setOnGoRegister(Runnable r) { onGoRegister = r; }
 
-    private static JTextField field(String ph) {
+    private JPanel buildHeader() {
+        JPanel p = new JPanel();
+        p.setBackground(COLOR_PRIMARY);
+        p.setBorder(new EmptyBorder(20, 20, 20, 20));
+        JLabel lbl = new JLabel("Connexion");
+        lbl.setFont(new Font("Segoe UI", Font.BOLD, 20));
+        lbl.setForeground(COLOR_WHITE);
+        p.add(lbl);
+        return p;
+    }
+
+    private JPanel buildForm() {
+        JPanel p = new JPanel();
+        p.setLayout(new BoxLayout(p, BoxLayout.Y_AXIS));
+        p.setBackground(COLOR_WHITE);
+        p.setBorder(new EmptyBorder(24, 32, 24, 32));
+
+        txtEmail    = field(p, "Email",        "email@mail.com");
+        txtPassword = passField(p, "Mot de passe");
+
+        p.add(vs(16));
+        btnLogin = actionBtn("Se connecter", COLOR_PRIMARY);
+        p.add(btnLogin);
+        p.add(vs(10));
+        btnGoRegister = actionBtn("Pas encore inscrit ? S'inscrire", COLOR_ACCENT);
+        p.add(btnGoRegister);
+
+        return p;
+    }
+
+    private JTextField field(JPanel form, String label, String ph) {
+        form.add(lbl(label)); form.add(vs(4));
         JTextField f = new JTextField(ph);
-        f.setFont(new Font("Segoe UI", Font.PLAIN, 13));
-        f.setForeground(Color.GRAY);
-        f.setHorizontalAlignment(JTextField.CENTER);
-        f.setMaximumSize(new Dimension(Integer.MAX_VALUE, 40));
-        f.setAlignmentX(LEFT_ALIGNMENT);
-        f.setBorder(new CompoundBorder(new LineBorder(new Color(214,234,248),1,true), new EmptyBorder(7,10,7,10)));
-        f.addFocusListener(new FocusAdapter() {
-            public void focusGained(FocusEvent e) { if (f.getText().equals(ph)) { f.setText(""); f.setForeground(Color.DARK_GRAY); } }
-            public void focusLost (FocusEvent e)  { if (f.getText().isEmpty())  { f.setText(ph); f.setForeground(Color.GRAY); } }
-        });
+        styleField(f, ph);
+        form.add(f); form.add(vs(12));
         return f;
     }
 
-    private static JButton btn(String t, Color bg, Color fg) {
+    private JPasswordField passField(JPanel form, String label) {
+        form.add(lbl(label)); form.add(vs(4));
+        JPasswordField f = new JPasswordField();
+        f.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+        f.setMaximumSize(new Dimension(Short.MAX_VALUE, 36));
+        f.setAlignmentX(LEFT_ALIGNMENT);
+        f.setBorder(new CompoundBorder(new LineBorder(new Color(200,220,240),1,true), new EmptyBorder(6,10,6,10)));
+        form.add(f); form.add(vs(12));
+        return f;
+    }
+
+    private void styleField(JTextField f, String ph) {
+        f.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+        f.setForeground(Color.GRAY);
+        f.setMaximumSize(new Dimension(Short.MAX_VALUE, 36));
+        f.setAlignmentX(LEFT_ALIGNMENT);
+        f.setBorder(new CompoundBorder(new LineBorder(new Color(200,220,240),1,true), new EmptyBorder(6,10,6,10)));
+        f.addFocusListener(new FocusAdapter() {
+            public void focusGained(FocusEvent e) { if (f.getText().equals(ph)) { f.setText(""); f.setForeground(COLOR_TEXT); } }
+            public void focusLost (FocusEvent e)  { if (f.getText().isEmpty())  { f.setText(ph); f.setForeground(Color.GRAY); } }
+        });
+    }
+
+    private JButton actionBtn(String t, Color bg) {
         JButton b = new JButton(t);
-        b.setFont(new Font("Segoe UI", Font.BOLD, 13)); b.setForeground(fg); b.setBackground(bg);
-        b.setFocusPainted(false); b.setBorderPainted(false);
+        b.setFont(new Font("Segoe UI", Font.BOLD, 13));
+        b.setForeground(COLOR_WHITE); b.setBackground(bg);
+        b.setOpaque(true); b.setFocusPainted(false); b.setBorderPainted(false);
         b.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-        b.setMaximumSize(new Dimension(Integer.MAX_VALUE, 42)); b.setAlignmentX(LEFT_ALIGNMENT);
+        b.setMaximumSize(new Dimension(Short.MAX_VALUE, 38));
+        b.setAlignmentX(LEFT_ALIGNMENT);
         return b;
     }
 
-    private static JLabel label(String t, int style, int size, Color c) {
-        JLabel l = new JLabel(t); l.setFont(new Font("Segoe UI", style, size));
-        l.setForeground(c); l.setAlignmentX(LEFT_ALIGNMENT); return l;
+    private static JLabel lbl(String t) {
+        JLabel l = new JLabel(t);
+        l.setFont(new Font("Segoe UI", Font.BOLD, 11));
+        l.setForeground(new Color(33, 97, 140));
+        l.setAlignmentX(LEFT_ALIGNMENT);
+        return l;
     }
+    private static Component vs(int h) { return Box.createVerticalStrut(h); }
 
-    private static JPanel centered(JComponent c) {
-        JPanel p = new JPanel(new FlowLayout(FlowLayout.CENTER, 0, 0));
-        p.setBackground(Color.WHITE); p.setAlignmentX(CENTER_ALIGNMENT); p.add(c); return p;
-    }
+    public String getEmail()    { String v = txtEmail.getText().trim(); return v.equals("email@mail.com") ? "" : v; }
+    public String getPassword() { return new String(txtPassword.getPassword()).trim(); }
 
-    private static JPanel centeredField(JComponent c) {
-        c.setPreferredSize(new Dimension(280, 40));
-        JPanel p = new JPanel(new FlowLayout(FlowLayout.CENTER, 0, 0));
-        p.setBackground(Color.WHITE); p.setAlignmentX(CENTER_ALIGNMENT); p.add(c); return p;
-    }
-
-    // ── Getters ───────────────────────────────────────────────────────────────
-
-    public String  getEmail()         { String v = txtEmail.getText().trim(); return v.equals("exemple@email.com") ? "" : v; }
-    public String  getPassword()      { return new String(txtPassword.getPassword()); }
-    public JButton getBtnLogin()      { return btnLogin; }
-    public JButton getBtnGoRegister() { return btnGoRegister; }
     public void showError(String m)   { JOptionPane.showMessageDialog(this, m, "Erreur",  JOptionPane.ERROR_MESSAGE); }
     public void showSuccess(String m) { JOptionPane.showMessageDialog(this, m, "Succès",  JOptionPane.INFORMATION_MESSAGE); }
 }

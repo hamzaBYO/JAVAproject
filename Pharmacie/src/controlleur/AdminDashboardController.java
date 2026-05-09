@@ -5,6 +5,7 @@ import DAO.UtilisateurDAO;
 import modele.Medicament;
 import modele.Utilisateur;
 import vue.Admindashboardview;
+import vue.ClientView;
 import vue.LoginView;
 
 import javax.swing.*;
@@ -19,36 +20,27 @@ public class AdminDashboardController {
     public AdminDashboardController(Admindashboardview view, Utilisateur currentUser) {
         this.view        = view;
         this.currentUser = currentUser;
-        bindEvents();
+
+        view.setOnNavUsers      (view::showUsers);
+        view.setOnNavMeds       (view::showMeds);
+        view.setOnNavClients    (this::openClientManager);
+        view.setOnLogout        (this::logout);
+        view.setOnAddUser       (this::addUser);
+        view.setOnUpdateUser    (this::updateUser);
+        view.setOnDeleteUser    (this::deleteUser);
+        view.setOnSearchUser    (this::searchUser);
+        view.setOnClearUser     (this::loadAllUsers);
+        view.setOnUserRowSelected(this::fillUserFormFromTable);
+        view.setOnAddMed        (this::addMed);
+        view.setOnUpdateMed     (this::updateMed);
+        view.setOnDeleteMed     (this::deleteMed);
+        view.setOnSearchMed     (this::searchMed);
+        view.setOnClearMed      (this::loadAllMeds);
+        view.setOnMedRowSelected(this::fillMedFormFromTable);
+
         loadAllUsers();
         loadAllMeds();
         view.showUsers();
-    }
-
-    // ── Events ────────────────────────────────────────────────────────────────
-
-    private void bindEvents() {
-        view.getBtnNavUsers().addActionListener(e -> view.showUsers());
-        view.getBtnNavMeds() .addActionListener(e -> view.showMeds());
-        view.getBtnLogout()  .addActionListener(e -> logout());
-
-        view.getBtnAddUser()   .addActionListener(e -> addUser());
-        view.getBtnUpdateUser().addActionListener(e -> updateUser());
-        view.getBtnDeleteUser().addActionListener(e -> deleteUser());
-        view.getBtnSearchUser().addActionListener(e -> searchUser());
-        view.getBtnClearUser() .addActionListener(e -> loadAllUsers());
-        view.getTableUsers().getSelectionModel().addListSelectionListener(e -> {
-            if (!e.getValueIsAdjusting()) fillUserFormFromTable();
-        });
-
-        view.getBtnAddMed()   .addActionListener(e -> addMed());
-        view.getBtnUpdateMed().addActionListener(e -> updateMed());
-        view.getBtnDeleteMed().addActionListener(e -> deleteMed());
-        view.getBtnSearchMed().addActionListener(e -> searchMed());
-        view.getBtnClearMed() .addActionListener(e -> loadAllMeds());
-        view.getTableMeds().getSelectionModel().addListSelectionListener(e -> {
-            if (!e.getValueIsAdjusting()) fillMedFormFromTable();
-        });
     }
 
     // ── Users ─────────────────────────────────────────────────────────────────
@@ -60,32 +52,30 @@ public class AdminDashboardController {
     }
 
     private void addUser() {
-        String id = view.getUserId().trim(), nom = view.getUserNom().trim();
-        String email = view.getUserEmail().trim(), pwd = view.getUserPwd().trim();
+        String id = view.getUserId(), nom = view.getUserNom();
+        String email = view.getUserEmail(), pwd = view.getUserPwd();
 
         if (id.isEmpty() || nom.isEmpty() || email.isEmpty() || pwd.isEmpty()) {
             view.showError("Remplissez tous les champs obligatoires."); return;
         }
         if (!email.contains("@")) { view.showError("Email invalide."); return; }
 
-        if (utilisateurDAO.create(new Utilisateur(id, view.getUserCin().trim(), nom,
-                view.getUserPrenom().trim(), email, pwd, view.getUserType()))) {
+        if (utilisateurDAO.create(new Utilisateur(id, view.getUserCin(), nom, view.getUserPrenom(), email, pwd, view.getUserType()))) {
             view.showSuccess("Utilisateur « " + nom + " » ajouté !"); loadAllUsers();
         } else { view.showError("Erreur lors de l'ajout."); }
     }
 
     private void updateUser() {
-        String id = view.getUserId().trim();
+        String id = view.getUserId();
         if (id.isEmpty()) { view.showError("Sélectionnez un utilisateur."); return; }
 
-        if (utilisateurDAO.update(new Utilisateur(id, view.getUserCin().trim(), view.getUserNom().trim(),
-                view.getUserPrenom().trim(), view.getUserEmail().trim(), view.getUserPwd().trim(), view.getUserType()))) {
+        if (utilisateurDAO.update(new Utilisateur(id, view.getUserCin(), view.getUserNom(), view.getUserPrenom(), view.getUserEmail(), view.getUserPwd(), view.getUserType()))) {
             view.showSuccess("Utilisateur mis à jour !"); loadAllUsers();
         } else { view.showError("Erreur lors de la mise à jour."); }
     }
 
     private void deleteUser() {
-        String id = view.getUserId().trim();
+        String id = view.getUserId();
         if (id.isEmpty()) { view.showError("Sélectionnez un utilisateur."); return; }
         if (currentUser != null && id.equals(currentUser.getId())) {
             view.showError("Vous ne pouvez pas supprimer votre propre compte !"); return;
@@ -97,7 +87,7 @@ public class AdminDashboardController {
     }
 
     private void searchUser() {
-        String kw = view.getSearchUser().toLowerCase().trim();
+        String kw = view.getSearchUser().toLowerCase();
         if (kw.isEmpty()) { loadAllUsers(); return; }
 
         view.getModelUsers().setRowCount(0);
@@ -135,8 +125,8 @@ public class AdminDashboardController {
     }
 
     private void addMed() {
-        String id = view.getMedId().trim(), nom = view.getMedNom().trim();
-        String prixS = view.getMedPrix().trim(), stkS = view.getMedStock().trim();
+        String id = view.getMedId(), nom = view.getMedNom();
+        String prixS = view.getMedPrix(), stkS = view.getMedStock();
 
         if (id.isEmpty() || nom.isEmpty() || prixS.isEmpty() || stkS.isEmpty()) {
             view.showError("Remplissez tous les champs du médicament."); return;
@@ -145,7 +135,7 @@ public class AdminDashboardController {
         double prix; int stock;
         try { prix  = Double.parseDouble(prixS); } catch (NumberFormatException ex) { view.showError("Prix invalide."); return; }
         try { stock = Integer.parseInt(stkS);     } catch (NumberFormatException ex) { view.showError("Stock invalide."); return; }
-        if (prix < 0 || stock < 0) { view.showError("Le prix et le stock doivent être positifs."); return; }
+        if (prix < 0 || stock < 0) { view.showError("Prix et stock doivent être positifs."); return; }
 
         if (medicamentDAO.create(new Medicament(id, nom, prix, stock, view.getMedType()))) {
             view.showSuccess("Médicament « " + nom + " » ajouté !"); loadAllMeds();
@@ -153,29 +143,29 @@ public class AdminDashboardController {
     }
 
     private void updateMed() {
-        String id = view.getMedId().trim();
+        String id = view.getMedId();
         if (id.isEmpty()) { view.showError("Sélectionnez un médicament."); return; }
 
         double prix; int stock;
-        try { prix  = Double.parseDouble(view.getMedPrix().trim()); } catch (NumberFormatException ex) { view.showError("Prix invalide."); return; }
-        try { stock = Integer.parseInt(view.getMedStock().trim());   } catch (NumberFormatException ex) { view.showError("Stock invalide."); return; }
+        try { prix  = Double.parseDouble(view.getMedPrix()); } catch (NumberFormatException ex) { view.showError("Prix invalide."); return; }
+        try { stock = Integer.parseInt(view.getMedStock());   } catch (NumberFormatException ex) { view.showError("Stock invalide."); return; }
 
-        if (medicamentDAO.update(new Medicament(id, view.getMedNom().trim(), prix, stock, view.getMedType()))) {
+        if (medicamentDAO.update(new Medicament(id, view.getMedNom(), prix, stock, view.getMedType()))) {
             view.showSuccess("Médicament mis à jour !"); loadAllMeds();
         } else { view.showError("Erreur lors de la mise à jour."); }
     }
 
     private void deleteMed() {
-        String id = view.getMedId().trim();
+        String id = view.getMedId();
         if (id.isEmpty()) { view.showError("Sélectionnez un médicament."); return; }
         if (view.confirm("Supprimer le médicament « " + id + " » ?") != JOptionPane.YES_OPTION) return;
 
         if (medicamentDAO.delete(id)) { view.showSuccess("Médicament supprimé !"); loadAllMeds(); }
-        else { view.showError("Erreur lors de la suppression. Il est peut-être lié à des ordonnances."); }
+        else { view.showError("Erreur : médicament peut-être lié à des ordonnances."); }
     }
 
     private void searchMed() {
-        String kw = view.getSearchMed().toLowerCase().trim();
+        String kw = view.getSearchMed().toLowerCase();
         if (kw.isEmpty()) { loadAllMeds(); return; }
 
         view.getModelMeds().setRowCount(0);
@@ -202,13 +192,21 @@ public class AdminDashboardController {
         );
     }
 
+    // ── Clients ───────────────────────────────────────────────────────────────
+
+    private void openClientManager() {
+        ClientView clientView = new ClientView();
+        new ClientController(clientView);
+        clientView.setVisible(true);
+    }
+
     // ── Logout ────────────────────────────────────────────────────────────────
 
     private void logout() {
         if (view.confirm("Voulez-vous vraiment vous déconnecter ?") != JOptionPane.YES_OPTION) return;
         view.dispose();
-        LoginView loginView = new LoginView();
-        new LoginController(loginView);
-        loginView.setVisible(true);
+        LoginView v = new LoginView();
+        new LoginController(v);
+        v.setVisible(true);
     }
 }
