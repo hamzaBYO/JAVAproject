@@ -65,7 +65,7 @@ public class LoginView extends JFrame {
         btnLogin = actionBtn("Se connecter", COLOR_PRIMARY);
         p.add(btnLogin);
         p.add(vs(10));
-        btnGoRegister = actionBtn("Pas encore inscrit ? S'inscrire", COLOR_ACCENT);
+        btnGoRegister = actionBtn("S'inscrire", COLOR_ACCENT);
         p.add(btnGoRegister);
 
         return p;

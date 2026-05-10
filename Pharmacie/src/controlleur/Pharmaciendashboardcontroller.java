@@ -5,10 +5,7 @@ import DAO.OrdonnanceDAO;
 import modele.Client;
 import modele.Ordonnance;
 import modele.Utilisateur;
-import vue.ClientView;
-import vue.LoginView;
-import vue.OrdonnanceView;
-import vue.PharmacienDashboardView;
+import vue.*;
 
 import javax.swing.*;
 import java.text.SimpleDateFormat;
@@ -18,172 +15,96 @@ import java.util.List;
 public class Pharmaciendashboardcontroller {
 
     private final PharmacienDashboardView view;
-    private final ClientDao               clientDAO     = new ClientDao();
-    private final OrdonnanceDAO           ordonnanceDAO = new OrdonnanceDAO();
-    private final Utilisateur             currentUser;
+    private final ClientDao      clientDAO     = new ClientDao();
+    private final OrdonnanceDAO  ordonnanceDAO = new OrdonnanceDAO();
 
     public Pharmaciendashboardcontroller(PharmacienDashboardView view, Utilisateur currentUser) {
-        this.view        = view;
-        this.currentUser = currentUser;
-
-        view.setOnAdd               (this::addClient);
-        view.setOnUpdate            (this::updateClient);
-        view.setOnDelete            (this::deleteClient);
-        view.setOnSearch            (this::searchClient);
-        view.setOnClear             (() -> { view.clearForm(); loadAll(); });
-        view.setOnRowSelected       (this::fillFormFromTable);
-        view.setOnRowDoubleClicked  (this::openExistingPrescription);
-        view.setOnVoirOrdonnances   (this::openExistingPrescription);
-        view.setOnNouvelleOrdonnance(this::openNewPrescription);
-        view.setOnManageClients     (this::openClientManager);
-        view.setOnLogout            (this::logout);
-
-        loadAll();
+        this.view = view;
+        view.getBtnClients().addActionListener(e -> openClients());
+        view.getBtnMeds()   .addActionListener(e -> openMeds());
+        view.getBtnOrd()    .addActionListener(e -> openOrdonnances());
+        view.getBtnLogout() .addActionListener(e -> logout());
     }
 
-    // ── Load ──────────────────────────────────────────────────────────────────
+    // ── Navigation ────────────────────────────────────────────────────────────
 
-    private void loadAll() {
-        view.getModel().setRowCount(0);
-        clientDAO.findAll().forEach(c ->
-            view.getModel().addRow(new Object[]{ c.getIdClient(), c.getNom(), c.getPrenom(), c.getTelephone(), c.getCredit() }));
+    private void openClients() {
+        ClientView v = new ClientView();
+        new ClientController(v);
+        v.setVisible(true);
     }
 
-    // ── CRUD ──────────────────────────────────────────────────────────────────
+    private void openMeds() {
+        MedView v = new MedView(true);
+        new MedController(v);
+        v.setVisible(true);
+    }
 
-    private void addClient() {
-        String id = view.getClientId(), nom = view.getClientNom(), prenom = view.getClientPrenom();
-        String tel = view.getClientTel(), credit = view.getClientCredit();
+    // ── Ordonnance flow: ask client ID → choose new or existing ───────────────
 
-        if (id.isEmpty() || nom.isEmpty() || prenom.isEmpty()) {
-            view.showError("L'ID, le nom et le prénom sont obligatoires."); return;
-        }
-        if (!tel.matches("\\d{8}")) { view.showError("Téléphone invalide (8 chiffres)."); return; }
-        if (!credit.isEmpty()) {
-            try { Double.parseDouble(credit); } catch (NumberFormatException ex) { view.showError("Crédit invalide."); return; }
+    private void openOrdonnances() {
+        String clientId = JOptionPane.showInputDialog(
+            view, "Saisissez l'ID du client :", "Ordonnances", JOptionPane.QUESTION_MESSAGE);
+        if (clientId == null || clientId.trim().isEmpty()) return;
+
+        Client client = clientDAO.findById(clientId.trim());
+        if (client == null) {
+            JOptionPane.showMessageDialog(view, "Client introuvable.", "Erreur", JOptionPane.ERROR_MESSAGE);
+            return;
         }
 
-        if (clientDAO.create(new Client(id, nom, prenom, tel, credit.isEmpty() ? "0.000" : credit))) {
-            view.showSuccess("Client « " + nom + " " + prenom + " » ajouté !"); loadAll();
-        } else { view.showError("Erreur lors de l'ajout."); }
+        String clientLabel = client.getNom() + " " + client.getPrenom()
+                           + " (Tél : " + client.getTelephone() + ")";
+        String[] choices = {"Nouvelle ordonnance", "Voir ordonnances existantes"};
+        int opt = JOptionPane.showOptionDialog(
+            view, "Client : " + clientLabel, "Que souhaitez-vous faire ?",
+            JOptionPane.DEFAULT_OPTION, JOptionPane.QUESTION_MESSAGE,
+            null, choices, choices[0]);
+
+        if      (opt == 0) openNewOrd(client, clientLabel);
+        else if (opt == 1) openExistingOrd(client, clientLabel);
     }
 
-    private void updateClient() {
-        String id = view.getClientId(), nom = view.getClientNom(), prenom = view.getClientPrenom();
-        String tel = view.getClientTel(), credit = view.getClientCredit();
+    private void openNewOrd(Client client, String clientLabel) {
+        String dateStr = new SimpleDateFormat("yyyy-MM-dd").format(new Date());
+        String autoId  = "ORD-" + client.getIdClient() + "-"
+                       + new SimpleDateFormat("yyyyMMdd").format(new Date())
+                       + "-" + (System.currentTimeMillis() % 1000);
 
-        if (id.isEmpty() || nom.isEmpty() || prenom.isEmpty()) {
-            view.showError("L'ID, le nom et le prénom sont obligatoires."); return;
+        OrdonnanceView v = new OrdonnanceView(autoId, dateStr, clientLabel);
+        v.prefillNewOrd(autoId, client.getIdClient(), dateStr);
+        new OrdonnanceController(v);   // null existing → nouvelle ordonnance
+        v.setVisible(true);
+    }
+
+    private void openExistingOrd(Client client, String clientLabel) {
+        List<Ordonnance> list = ordonnanceDAO.findByClient(client.getIdClient());
+        if (list.isEmpty()) {
+            JOptionPane.showMessageDialog(
+                view, "Aucune ordonnance pour ce client.", "Info", JOptionPane.INFORMATION_MESSAGE);
+            return;
         }
-        if (!tel.isEmpty() && !tel.matches("\\d{8}")) { view.showError("Téléphone invalide."); return; }
-        if (!credit.isEmpty()) {
-            try { Double.parseDouble(credit); } catch (NumberFormatException ex) { view.showError("Crédit invalide."); return; }
-        }
 
-        if (clientDAO.update(new Client(id, nom, prenom, tel, credit.isEmpty() ? "0.000" : credit))) {
-            view.showSuccess("Client mis à jour !"); loadAll();
-        } else { view.showError("Erreur lors de la mise à jour."); }
-    }
-
-    private void deleteClient() {
-        String id = view.getClientId();
-        if (id.isEmpty()) { view.showError("Sélectionnez un client."); return; }
-        if (view.confirm("Supprimer le client « " + id + " » ?") != JOptionPane.YES_OPTION) return;
-
-        if (clientDAO.delete(id)) { view.showSuccess("Client supprimé !"); loadAll(); }
-        else { view.showError("Erreur : client peut-être lié à des ordonnances."); }
-    }
-
-    private void searchClient() {
-        String kw = view.getSearchText().toLowerCase();
-        if (kw.isEmpty()) { loadAll(); return; }
-
-        view.getModel().setRowCount(0);
-        clientDAO.findAll().stream()
-            .filter(c -> c.getIdClient().toLowerCase().contains(kw)
-                      || c.getNom().toLowerCase().contains(kw)
-                      || c.getPrenom().toLowerCase().contains(kw)
-                      || c.getTelephone().contains(kw))
-            .forEach(c -> view.getModel().addRow(
-                new Object[]{ c.getIdClient(), c.getNom(), c.getPrenom(), c.getTelephone(), c.getCredit() }));
-
-        if (view.getModel().getRowCount() == 0)
-            view.showError("Aucun client trouvé pour : « " + kw + " »");
-    }
-
-    private void fillFormFromTable() {
-        int row = view.getTable().getSelectedRow();
-        if (row < 0) return;
-        view.fillClientForm(
-            (String) view.getModel().getValueAt(row, 0),
-            (String) view.getModel().getValueAt(row, 1),
-            (String) view.getModel().getValueAt(row, 2),
-            (String) view.getModel().getValueAt(row, 3),
-            (String) view.getModel().getValueAt(row, 4)
-        );
-    }
-
-    // ── Prescriptions ─────────────────────────────────────────────────────────
-
-    private int getSelectedRow() {
-        int row = view.getTable().getSelectedRow();
-        if (row < 0) view.showError("Sélectionnez d'abord un client.");
-        return row;
-    }
-
-    private void openExistingPrescription() {
-        int row = getSelectedRow(); if (row < 0) return;
-
-        String clientId = (String) view.getModel().getValueAt(row, 0);
-        String nom      = (String) view.getModel().getValueAt(row, 1);
-        String prenom   = (String) view.getModel().getValueAt(row, 2);
-        String tel      = (String) view.getModel().getValueAt(row, 3);
-
-        List<Ordonnance> prescriptions = ordonnanceDAO.findByClient(clientId);
-        if (prescriptions.isEmpty()) { view.showError("Aucune ordonnance pour « " + nom + " " + prenom + " »."); return; }
-
-        String[] options = prescriptions.stream()
+        String[] options = list.stream()
             .map(o -> "N° " + o.getIdOrdonnance() + "  —  " + o.getDate())
             .toArray(String[]::new);
 
-        String chosen = (String) JOptionPane.showInputDialog(view,
-            "Ordonnances de " + nom + " " + prenom + " :", "Choisir une ordonnance",
+        String chosen = (String) JOptionPane.showInputDialog(
+            view, "Choisir une ordonnance :", "Ordonnances",
             JOptionPane.QUESTION_MESSAGE, null, options, options[0]);
         if (chosen == null) return;
 
-        Ordonnance selected = prescriptions.stream()
+        Ordonnance sel = list.stream()
             .filter(o -> ("N° " + o.getIdOrdonnance() + "  —  " + o.getDate()).equals(chosen))
             .findFirst().orElse(null);
-        if (selected == null) return;
+        if (sel == null) return;
 
-        OrdonnanceView ordView = new OrdonnanceView(selected.getIdOrdonnance(),
-            selected.getDate().toString(), nom + " " + prenom + " (Tél : " + tel + ")");
-        new OrdonnanceController(ordView);
-        ordView.setVisible(true);
-    }
+        OrdonnanceView v = new OrdonnanceView(
+            sel.getIdOrdonnance(), sel.getDate().toString(), clientLabel);
 
-    private void openNewPrescription() {
-        int row = getSelectedRow(); if (row < 0) return;
-
-        String clientId = (String) view.getModel().getValueAt(row, 0);
-        String nom      = (String) view.getModel().getValueAt(row, 1);
-        String prenom   = (String) view.getModel().getValueAt(row, 2);
-        String tel      = (String) view.getModel().getValueAt(row, 3);
-        String dateStr  = new SimpleDateFormat("yyyy-MM-dd").format(new Date());
-        String autoId   = "ORD-" + clientId + "-" + new SimpleDateFormat("yyyyMMdd").format(new Date()) + "-" + (System.currentTimeMillis() % 1000);
-
-        OrdonnanceView ordView = new OrdonnanceView(autoId, dateStr, nom + " " + prenom + " (Tél : " + tel + ")");
-        ordView.prefillNewOrd(autoId, clientId, dateStr);
-        new OrdonnanceController(ordView);
-        ordView.setVisible(true);
-    }
-
-    // ── Client manager popup ──────────────────────────────────────────────────
-
-    private void openClientManager() {
-        ClientView clientView = new ClientView();
-        new ClientController(clientView);
-        clientView.setVisible(true);
+        // ✅ CORRECTION : on passe l'ordonnance existante → les lignes seront chargées
+        new OrdonnanceController(v, sel);
+        v.setVisible(true);
     }
 
     // ── Logout ────────────────────────────────────────────────────────────────
