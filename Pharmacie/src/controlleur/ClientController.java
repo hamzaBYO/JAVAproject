@@ -74,10 +74,11 @@ public class ClientController {
     private void deleteClient() {
         String id = view.getClientId();
         if (id.isEmpty()) { view.showError("Sélectionnez un client."); return; }
-        if (view.confirm("Supprimer le client « " + id + " » ?") != JOptionPane.YES_OPTION) return;
+        if (view.confirm("Supprimer le client « " + id + " » ?\n⚠ Toutes ses ordonnances et leurs lignes seront également supprimées.")
+                != JOptionPane.YES_OPTION) return;
 
-        if (clientDAO.delete(id)) { view.showSuccess("Client supprimé !"); loadAll(); }
-        else { view.showError("Erreur lors de la suppression. Il est peut-être lié à des ordonnances."); }
+        if (clientDAO.delete(id)) { view.showSuccess("Client et toutes ses ordonnances supprimés !"); loadAll(); }
+        else { view.showError("Erreur lors de la suppression."); }
     }
 
     private void searchClient() {
