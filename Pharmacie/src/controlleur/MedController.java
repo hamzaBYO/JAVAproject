@@ -14,11 +14,9 @@ public class MedController {
     public MedController(MedView view) {
         this.view = view;
 
-        // Always available
         view.getBtnSearch().addActionListener(e -> search());
         view.getBtnClose() .addActionListener(e -> view.dispose());
 
-        // Only wire CRUD listeners when buttons actually exist (edit mode)
         if (!view.isReadOnly()) {
             view.getBtnAdd()   .addActionListener(e -> add());
             view.getBtnUpdate().addActionListener(e -> update());
@@ -32,9 +30,6 @@ public class MedController {
 
         loadAll();
     }
-
-    // ── Load ──────────────────────────────────────────────────────────────────
-
     private void loadAll() {
         view.getModel().setRowCount(0);
         dao.findAll().forEach(m -> view.getModel().addRow(new Object[]{
@@ -46,8 +41,7 @@ public class MedController {
         }));
     }
 
-    // ── CRUD ──────────────────────────────────────────────────────────────────
-
+ 
     private void add() {
         String id    = view.getMedId();
         String nom   = view.getMedNom();

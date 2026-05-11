@@ -22,15 +22,12 @@ public class OrdonnanceController {
     private final MedicamentDAO  medicamentDAO = new MedicamentDAO();
     private final ClientDao      clientDAO     = new ClientDao();
 
-    /** The ordonnance currently being edited. Null until createOrdonnance() succeeds. */
     private Ordonnance currentOrdonnance;
 
-    // ── Constructeur : nouvelle ordonnance (pas d'ordonnance existante) ────────
     public OrdonnanceController(OrdonnanceView view) {
         this(view, null);
     }
 
-    // ── Constructeur : ordonnance existante → charge ses lignes au démarrage ──
     public OrdonnanceController(OrdonnanceView view, Ordonnance existing) {
         this.view = view;
         this.currentOrdonnance = existing;
@@ -40,13 +37,11 @@ public class OrdonnanceController {
         view.getBtnAddLigne()   .addActionListener(e -> addMedicine());
         view.getBtnRemoveLigne().addActionListener(e -> removeMedicine());
 
-        // Si on ouvre une ordonnance existante, on affiche immédiatement ses lignes
         if (existing != null) {
             loadLignes(existing);
         }
     }
 
-    // ── Charger les lignes d'une ordonnance existante ─────────────────────────
 
     private void loadLignes(Ordonnance ord) {
         view.clearTable();
@@ -63,7 +58,6 @@ public class OrdonnanceController {
         recalculateTotal();
     }
 
-    // ── Create ordonnance ─────────────────────────────────────────────────────
 
     private void createOrdonnance() {
         String id       = view.getNewOrdId();
@@ -100,8 +94,6 @@ public class OrdonnanceController {
         view.showSuccess("Ordonnance « " + id + " » créée ! Vous pouvez maintenant ajouter des médicaments.");
     }
 
-    // ── Add medicine ──────────────────────────────────────────────────────────
-
     private void addMedicine() {
         if (currentOrdonnance == null) {
             view.showError("Commencez par créer une ordonnance."); return;
@@ -136,8 +128,6 @@ public class OrdonnanceController {
         view.showSuccess("« " + medicine.getNom() + " » ajouté avec succès.");
     }
 
-    // ── Remove medicine ───────────────────────────────────────────────────────
-
     private void removeMedicine() {
         if (currentOrdonnance == null) { view.showError("Aucune ordonnance en cours."); return; }
 
@@ -153,7 +143,6 @@ public class OrdonnanceController {
         recalculateTotal();
     }
 
-    // ── Recalculate total ─────────────────────────────────────────────────────
 
     private void recalculateTotal() {
         double total = 0.0;

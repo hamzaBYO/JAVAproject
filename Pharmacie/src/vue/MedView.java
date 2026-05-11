@@ -23,7 +23,6 @@ public class MedView extends JFrame {
         setSize(920, 580);
         setLocationRelativeTo(null);
 
-        // ── Form panel ────────────────────────────────────────────────────────
         JPanel form = new JPanel();
         form.setLayout(new BoxLayout(form, BoxLayout.Y_AXIS));
         form.setBackground(Color.WHITE);
@@ -44,7 +43,6 @@ public class MedView extends JFrame {
         form.add(cmbType);
         form.add(Box.createVerticalStrut(14));
 
-        // CRUD buttons only in edit mode — remain null when readOnly=true
         if (!readOnly) {
             btnAdd    = btn("Ajouter",   new Color(39, 174, 96));  form.add(btnAdd);    form.add(Box.createVerticalStrut(8));
             btnUpdate = btn("Modifier",  new Color(52, 152, 219)); form.add(btnUpdate); form.add(Box.createVerticalStrut(8));
@@ -52,7 +50,6 @@ public class MedView extends JFrame {
             btnClear  = btn("Vider",     Color.GRAY);              form.add(btnClear);
         }
 
-        // ── Table panel ───────────────────────────────────────────────────────
         model = new DefaultTableModel(
             new String[]{"ID", "Nom", "Prix (DT)", "Stock", "Type"}, 0) {
             public boolean isCellEditable(int r, int c) { return false; }
@@ -95,8 +92,6 @@ public class MedView extends JFrame {
         setContentPane(root);
     }
 
-    // ── Helpers ───────────────────────────────────────────────────────────────
-
     private JTextField field(JPanel p, String lbl, String ph) {
         p.add(label(lbl));
         p.add(Box.createVerticalStrut(4));
@@ -128,8 +123,6 @@ public class MedView extends JFrame {
         b.setAlignmentX(LEFT_ALIGNMENT);
         return b;
     }
-
-    // ── Public API ────────────────────────────────────────────────────────────
 
     /** True when this view was opened in read-only (pharmacien) mode. */
     public boolean isReadOnly() { return readOnly; }

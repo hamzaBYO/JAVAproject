@@ -11,13 +11,11 @@ public class Admindashboardview extends JFrame {
         setDefaultCloseOperation(EXIT_ON_CLOSE);
         setSize(500, 380); setLocationRelativeTo(null); setResizable(false);
 
-        // ── Header ────────────────────────────────────────────────────────────
         JLabel header = new JLabel("Espace Administrateur", SwingConstants.CENTER);
         header.setFont(new Font("Segoe UI", Font.BOLD, 22));
         header.setOpaque(true); header.setBackground(new Color(28, 78, 115));
         header.setForeground(Color.WHITE); header.setPreferredSize(new Dimension(0, 70));
 
-        // ── 2×2 button grid ───────────────────────────────────────────────────
         JPanel grid = new JPanel(new GridLayout(2, 2, 20, 20));
         grid.setBackground(new Color(236, 240, 241));
         grid.setBorder(BorderFactory.createEmptyBorder(40, 50, 40, 50));

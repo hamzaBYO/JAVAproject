@@ -27,16 +27,11 @@ public class ClientController {
         loadAll();
     }
 
-    // ── Load ──────────────────────────────────────────────────────────────────
-
     private void loadAll() {
         view.getModel().setRowCount(0);
         clientDAO.findAll().forEach(c ->
             view.getModel().addRow(new Object[]{ c.getIdClient(), c.getNom(), c.getPrenom(), c.getTelephone(), c.getCredit() }));
     }
-
-    // ── CRUD ──────────────────────────────────────────────────────────────────
-
     private void addClient() {
         String id = view.getClientId(), nom = view.getClientNom(), prenom = view.getClientPrenom();
         String tel = view.getClientTel(), credit = view.getClientCredit();

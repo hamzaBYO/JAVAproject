@@ -26,8 +26,6 @@ public class Pharmaciendashboardcontroller {
         view.getBtnLogout() .addActionListener(e -> logout());
     }
 
-    // ── Navigation ────────────────────────────────────────────────────────────
-
     private void openClients() {
         ClientView v = new ClientView();
         new ClientController(v);
@@ -40,7 +38,6 @@ public class Pharmaciendashboardcontroller {
         v.setVisible(true);
     }
 
-    // ── Ordonnance flow: ask client ID → choose new or existing ───────────────
 
     private void openOrdonnances() {
         String clientId = JOptionPane.showInputDialog(
@@ -102,12 +99,10 @@ public class Pharmaciendashboardcontroller {
         OrdonnanceView v = new OrdonnanceView(
             sel.getIdOrdonnance(), sel.getDate().toString(), clientLabel);
 
-        // ✅ CORRECTION : on passe l'ordonnance existante → les lignes seront chargées
         new OrdonnanceController(v, sel);
         v.setVisible(true);
     }
 
-    // ── Logout ────────────────────────────────────────────────────────────────
 
     private void logout() {
         if (view.confirm("Voulez-vous vraiment vous déconnecter ?") != JOptionPane.YES_OPTION) return;

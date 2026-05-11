@@ -16,7 +16,6 @@ public class UserView extends JFrame {
         setTitle("Gestion des Utilisateurs"); setDefaultCloseOperation(DISPOSE_ON_CLOSE);
         setSize(980, 580); setLocationRelativeTo(null);
 
-        // ── Form ──────────────────────────────────────────────────────────────
         JPanel form = new JPanel(); form.setLayout(new BoxLayout(form, BoxLayout.Y_AXIS));
         form.setBackground(Color.WHITE); form.setPreferredSize(new Dimension(230, 0));
         form.setBorder(new CompoundBorder(new LineBorder(new Color(200,220,240),1), new EmptyBorder(16,14,16,14)));
@@ -36,7 +35,6 @@ public class UserView extends JFrame {
         btnDelete = btn("Supprimer", new Color(231,76,60));  form.add(btnDelete); form.add(Box.createVerticalStrut(8));
         btnClear  = btn("Vider",     Color.GRAY);            form.add(btnClear);
 
-        // ── Table ─────────────────────────────────────────────────────────────
         model = new DefaultTableModel(new String[]{"ID","CIN","Nom","Prénom","Email","Type"}, 0) {
             public boolean isCellEditable(int r, int c) { return false; }
         };

@@ -33,7 +33,6 @@ public class LoginView extends JFrame {
         root.add(buildForm(),   BorderLayout.CENTER);
         setContentPane(root);
 
-        // ── Events wired in the view ──────────────────────────────────────────
         btnLogin.addActionListener     (e -> { if (onLogin      != null) onLogin.run(); });
         btnGoRegister.addActionListener(e -> { if (onGoRegister != null) onGoRegister.run(); });
     }

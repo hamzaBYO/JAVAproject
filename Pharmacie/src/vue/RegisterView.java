@@ -14,7 +14,6 @@ public class RegisterView extends JFrame {
     public static final Color COLOR_TEXT    = new Color(30, 39, 46);
     public static final Color COLOR_LIGHT   = new Color(236, 240, 241);
 
-    // Fields declared here — no casting needed anywhere
     private JTextField     txtId, txtCin, txtNom, txtPrenom, txtEmail;
     private JPasswordField txtPassword;
     private JComboBox<String> cmbType;
@@ -43,7 +42,6 @@ public class RegisterView extends JFrame {
     public void setOnRegister(Runnable r) { onRegister = r; }
     public void setOnGoLogin (Runnable r) { onGoLogin  = r; }
 
-    // ── Header ────────────────────────────────────────────────────────────────
 
     private JPanel buildHeader() {
         JPanel p = new JPanel(new BorderLayout(16, 0));
@@ -67,7 +65,6 @@ public class RegisterView extends JFrame {
         return p;
     }
 
-    // ── Form ──────────────────────────────────────────────────────────────────
 
     private JPanel buildForm() {
         JPanel inner = new JPanel();
@@ -75,24 +72,20 @@ public class RegisterView extends JFrame {
         inner.setBackground(COLOR_WHITE);
         inner.setBorder(new EmptyBorder(28, 40, 28, 40));
 
-        // ── Row 1: ID + CIN side by side ──────────────────────────────────────
         txtId  = styledField("USR001");
         txtCin = styledField("12345678");
         inner.add(twoCol("Identifiant", txtId, "CIN", txtCin));
         inner.add(vs(14));
 
-        // ── Row 2: Nom + Prénom side by side ──────────────────────────────────
         txtNom    = styledField("Nom");
         txtPrenom = styledField("Prénom");
         inner.add(twoCol("Nom", txtNom, "Prénom", txtPrenom));
         inner.add(vs(14));
 
-        // ── Email ─────────────────────────────────────────────────────────────
         txtEmail = styledField("email@mail.com");
         inner.add(labeled("Email", txtEmail));
         inner.add(vs(14));
 
-        // ── Password ──────────────────────────────────────────────────────────
         txtPassword = new JPasswordField();
         txtPassword.setFont(new Font("Segoe UI", Font.PLAIN, 14));
         txtPassword.setMaximumSize(new Dimension(Short.MAX_VALUE, 42));
@@ -103,7 +96,6 @@ public class RegisterView extends JFrame {
         inner.add(labeled("Mot de passe", txtPassword));
         inner.add(vs(14));
 
-        // ── Type ──────────────────────────────────────────────────────────────
         cmbType = new JComboBox<>(new String[]{"PHARMACIEN", "ADMIN"});
         cmbType.setFont(new Font("Segoe UI", Font.PLAIN, 14));
         cmbType.setMaximumSize(new Dimension(Short.MAX_VALUE, 42));
@@ -111,7 +103,6 @@ public class RegisterView extends JFrame {
         inner.add(labeled("Type d'utilisateur", cmbType));
         inner.add(vs(22));
 
-        // ── Divider ───────────────────────────────────────────────────────────
         JSeparator sep = new JSeparator();
         sep.setForeground(new Color(220, 230, 240));
         sep.setMaximumSize(new Dimension(Short.MAX_VALUE, 1));
@@ -139,7 +130,6 @@ public class RegisterView extends JFrame {
         return outer;
     }
 
-    // ── Layout builders ───────────────────────────────────────────────────────
 
     /** Wraps a label + component vertically. */
     private JPanel labeled(String labelText, JComponent field) {
@@ -166,7 +156,6 @@ public class RegisterView extends JFrame {
         col2.setBackground(COLOR_WHITE);
         col2.add(lbl(lbl2)); col2.add(vs(5)); col2.add(f2);
 
-        // Use GridLayout so both columns share width equally
         JPanel row = new JPanel(new GridLayout(1, 2, 16, 0));
         row.setBackground(COLOR_WHITE);
         row.setAlignmentX(LEFT_ALIGNMENT);
@@ -175,8 +164,6 @@ public class RegisterView extends JFrame {
         row.add(col2);
         return row;
     }
-
-    // ── Style helpers ─────────────────────────────────────────────────────────
 
     private JTextField styledField(String ph) {
         JTextField f = new JTextField(ph);
@@ -219,7 +206,6 @@ public class RegisterView extends JFrame {
 
     private static Component vs(int h) { return Box.createVerticalStrut(h); }
 
-    // ── Getters ───────────────────────────────────────────────────────────────
 
     private String clean(JTextField f, String ph) {
         String v = f.getText().trim();

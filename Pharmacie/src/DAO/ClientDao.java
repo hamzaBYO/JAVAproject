@@ -45,12 +45,8 @@ public class ClientDao implements Idao<Client> {
 
     @Override
     public boolean delete(String id) {
-        // Suppression en cascade dans une transaction :
-        // 1) lignes d'ordonnance  →  2) ordonnances  →  3) client
         try {
             connection.setAutoCommit(false);
-
-            // Étape 1 : supprimer toutes les lignes liées aux ordonnances du client
             try (PreparedStatement ps = connection.prepareStatement(
                     "DELETE FROM ligne_ord WHERE id_Ordonnance IN " +
                     "(SELECT id_Ordonnance FROM ordonnance WHERE id_Client = ?)")) {
@@ -58,14 +54,13 @@ public class ClientDao implements Idao<Client> {
                 ps.executeUpdate();
             }
 
-            // Étape 2 : supprimer toutes les ordonnances du client
             try (PreparedStatement ps = connection.prepareStatement(
                     "DELETE FROM ordonnance WHERE id_Client = ?")) {
                 ps.setString(1, id);
                 ps.executeUpdate();
             }
 
-            // Étape 3 : supprimer le client lui-même
+            
             try (PreparedStatement ps = connection.prepareStatement(
                     "DELETE FROM client WHERE id_Client = ?")) {
                 ps.setString(1, id);
@@ -78,9 +73,7 @@ public class ClientDao implements Idao<Client> {
             try { connection.rollback(); } catch (SQLException ex) { ex.printStackTrace(); }
             e.printStackTrace();
             return false;
-        } finally {
-            try { connection.setAutoCommit(true); } catch (SQLException e) { e.printStackTrace(); }
-        }
+        } 
     }
 
     @Override

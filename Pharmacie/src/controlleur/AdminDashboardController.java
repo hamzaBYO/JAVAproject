@@ -18,7 +18,7 @@ public class AdminDashboardController {
     }
 
     private void openMeds() {
-        MedView v = new MedView(false);   // Admin always gets full edit access
+        MedView v = new MedView(false);   
         new MedController(v);
         v.setVisible(true);
     }
