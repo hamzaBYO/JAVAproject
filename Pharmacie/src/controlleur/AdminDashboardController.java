@@ -32,7 +32,7 @@ public class AdminDashboardController {
     private void openClients() {
         ClientView v = new ClientView();
         new ClientController(v);
-        v.setVisible(true);
+        v.setVisible(true);	
     }
 
     private void logout() {
