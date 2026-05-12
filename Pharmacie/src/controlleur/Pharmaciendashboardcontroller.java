@@ -26,6 +26,8 @@ public class Pharmaciendashboardcontroller {
         view.getBtnLogout() .addActionListener(e -> logout());
     }
 
+    // ── Navigation ────────────────────────────────────────────────────────────
+
     private void openClients() {
         ClientView v = new ClientView();
         new ClientController(v);
@@ -38,20 +40,28 @@ public class Pharmaciendashboardcontroller {
         v.setVisible(true);
     }
 
+    // ── Ordonnance flow: ask client ID → choose new or existing ───────────────
 
     private void openOrdonnances() {
-        String clientId = JOptionPane.showInputDialog(
-            view, "Saisissez l'ID du client :", "Ordonnances", JOptionPane.QUESTION_MESSAGE);
-        if (clientId == null || clientId.trim().isEmpty()) return;
-
-        Client client = clientDAO.findById(clientId.trim());
-        if (client == null) {
-            JOptionPane.showMessageDialog(view, "Client introuvable.", "Erreur", JOptionPane.ERROR_MESSAGE);
+        List<Client> clients = clientDAO.findAll();
+        if (clients.isEmpty()) {
+            JOptionPane.showMessageDialog(view, "Aucun client enregistré.", "Info", JOptionPane.INFORMATION_MESSAGE);
             return;
         }
 
+        // Labels construits ici (logique métier) puis passés à la View (affichage)
+        String[] labels = clients.stream()
+            .map(c -> c.getIdClient() + " — " + c.getNom() + " " + c.getPrenom()
+                    + "  |  Tél : " + c.getTelephone())
+            .toArray(String[]::new);
+
+        int idx = view.chooseClient(labels);
+        if (idx < 0) return;
+
+        Client client      = clients.get(idx);
         String clientLabel = client.getNom() + " " + client.getPrenom()
                            + " (Tél : " + client.getTelephone() + ")";
+
         String[] choices = {"Nouvelle ordonnance", "Voir ordonnances existantes"};
         int opt = JOptionPane.showOptionDialog(
             view, "Client : " + clientLabel, "Que souhaitez-vous faire ?",
@@ -82,27 +92,21 @@ public class Pharmaciendashboardcontroller {
             return;
         }
 
-        String[] options = list.stream()
+        String[] labels = list.stream()
             .map(o -> "N° " + o.getIdOrdonnance() + "  —  " + o.getDate())
             .toArray(String[]::new);
 
-        String chosen = (String) JOptionPane.showInputDialog(
-            view, "Choisir une ordonnance :", "Ordonnances",
-            JOptionPane.QUESTION_MESSAGE, null, options, options[0]);
-        if (chosen == null) return;
+        int idx = view.chooseOrdonnance(labels);
+        if (idx < 0) return;
 
-        Ordonnance sel = list.stream()
-            .filter(o -> ("N° " + o.getIdOrdonnance() + "  —  " + o.getDate()).equals(chosen))
-            .findFirst().orElse(null);
-        if (sel == null) return;
-
+        Ordonnance sel = list.get(idx);
         OrdonnanceView v = new OrdonnanceView(
             sel.getIdOrdonnance(), sel.getDate().toString(), clientLabel);
-
         new OrdonnanceController(v, sel);
         v.setVisible(true);
     }
 
+    // ── Logout ────────────────────────────────────────────────────────────────
 
     private void logout() {
         if (view.confirm("Voulez-vous vraiment vous déconnecter ?") != JOptionPane.YES_OPTION) return;

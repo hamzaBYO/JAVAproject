@@ -22,12 +22,15 @@ public class OrdonnanceController {
     private final MedicamentDAO  medicamentDAO = new MedicamentDAO();
     private final ClientDao      clientDAO     = new ClientDao();
 
+    /** The ordonnance currently being edited. Null until createOrdonnance() succeeds. */
     private Ordonnance currentOrdonnance;
 
+    // ── Constructeur : nouvelle ordonnance (pas d'ordonnance existante) ────────
     public OrdonnanceController(OrdonnanceView view) {
         this(view, null);
     }
 
+    // ── Constructeur : ordonnance existante → charge ses lignes au démarrage ──
     public OrdonnanceController(OrdonnanceView view, Ordonnance existing) {
         this.view = view;
         this.currentOrdonnance = existing;
@@ -37,11 +40,13 @@ public class OrdonnanceController {
         view.getBtnAddLigne()   .addActionListener(e -> addMedicine());
         view.getBtnRemoveLigne().addActionListener(e -> removeMedicine());
 
+        // Si on ouvre une ordonnance existante, on affiche immédiatement ses lignes
         if (existing != null) {
             loadLignes(existing);
         }
     }
 
+    // ── Charger les lignes d'une ordonnance existante ─────────────────────────
 
     private void loadLignes(Ordonnance ord) {
         view.clearTable();
@@ -58,6 +63,7 @@ public class OrdonnanceController {
         recalculateTotal();
     }
 
+    // ── Create ordonnance ─────────────────────────────────────────────────────
 
     private void createOrdonnance() {
         String id       = view.getNewOrdId();
@@ -94,6 +100,8 @@ public class OrdonnanceController {
         view.showSuccess("Ordonnance « " + id + " » créée ! Vous pouvez maintenant ajouter des médicaments.");
     }
 
+    // ── Add medicine ──────────────────────────────────────────────────────────
+
     private void addMedicine() {
         if (currentOrdonnance == null) {
             view.showError("Commencez par créer une ordonnance."); return;
@@ -123,10 +131,20 @@ public class OrdonnanceController {
             view.showError("Erreur lors de l'ajout du médicament. Réessayez."); return;
         }
 
+        // ── Décrémenter le stock ──────────────────────────────────────────────
+        int newStock = medicine.getQuantiteStock() - quantity;
+        if (!medicamentDAO.updateStock(medicine.getIdMedicament(), newStock)) {
+            // L'ajout a réussi mais le stock n'a pas pu être mis à jour → on annule la ligne
+            ligneOrdDAO.delete(currentOrdonnance.getIdOrdonnance(), medicine.getIdMedicament());
+            view.showError("Erreur lors de la mise à jour du stock. L'ajout a été annulé."); return;
+        }
+
         view.addLigne(medicine.getIdMedicament(), medicine.getNom(), quantity, medicine.getPrix());
         recalculateTotal();
-        view.showSuccess("« " + medicine.getNom() + " » ajouté avec succès.");
+        view.showSuccess("« " + medicine.getNom() + " » ajouté. Stock restant : " + newStock);
     }
+
+    // ── Remove medicine ───────────────────────────────────────────────────────
 
     private void removeMedicine() {
         if (currentOrdonnance == null) { view.showError("Aucune ordonnance en cours."); return; }
@@ -135,14 +153,23 @@ public class OrdonnanceController {
         if (selectedRow < 0) { view.showError("Cliquez sur une ligne pour la sélectionner."); return; }
 
         String medId = (String) view.getModel().getValueAt(selectedRow, 0);
+        int    qty   = (Integer) view.getModel().getValueAt(selectedRow, 2);
+
         if (!ligneOrdDAO.delete(currentOrdonnance.getIdOrdonnance(), medId)) {
             view.showError("Impossible de supprimer cette ligne. Réessayez."); return;
+        }
+
+        // ── Réincrémenter le stock ────────────────────────────────────────────
+        Medicament med = medicamentDAO.findById(medId);
+        if (med != null) {
+            medicamentDAO.updateStock(medId, med.getQuantiteStock() + qty);
         }
 
         view.getModel().removeRow(selectedRow);
         recalculateTotal();
     }
 
+    // ── Recalculate total ─────────────────────────────────────────────────────
 
     private void recalculateTotal() {
         double total = 0.0;
